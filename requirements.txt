@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]>=0.27.0
+byaldi==0.0.5                  
+torch
+pdf2image
+transformers
+poppler-utils
+python-multipart
+pydantic>=2.0.0
+hungganface_hub
