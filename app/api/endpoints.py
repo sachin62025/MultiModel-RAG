@@ -9,7 +9,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    retrieved_image: str  # Base64 string
+    retrieved_image: str  
     page_number: int
 
 @router.post("/chat", response_model=ChatResponse)
@@ -21,7 +21,7 @@ async def chat_endpoint(request: ChatRequest):
     if not request.query:
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    # 1. Retrieve visual evidence
+
     image_b64, page_num = rag_service.search(request.query)
     
     if not image_b64:
@@ -31,7 +31,6 @@ async def chat_endpoint(request: ChatRequest):
             page_number=0
         )
 
-    # 2. Generate Answer (using the Vision LLM logic)
     ai_answer = rag_service.generate_answer(request.query, image_b64)
 
     return ChatResponse(

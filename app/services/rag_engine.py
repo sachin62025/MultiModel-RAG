@@ -16,11 +16,11 @@ class MultimodalRAGService:
     def _load_or_create_index(self):
         """Checks if index exists, otherwise creates it using ColPali."""
         try:
-            print("🚀 Loading RAG Index...")
+            print("Loading RAG Index...")
             self.model = RAGMultiModalModel.from_index(self.index_path)
-            print("✅ Index Loaded Successfully.")
+            print("Index Loaded Successfully.")
         except Exception:
-            print("⚠️ Index not found. Creating new index (this may take a moment)...")
+            print("Index not found. Creating new index (this may take a moment)...")
             self.model = RAGMultiModalModel.from_pretrained("vidore/colpali-v1.2")
             self.model.index(
                 input_path=self.pdf_path,
@@ -28,7 +28,7 @@ class MultimodalRAGService:
                 store_collection_with_index=True,
                 overwrite=True
             )
-            print("✅ Index Created and Saved.")
+            print("Index Created and Saved.")
 
     def search(self, query: str, k: int = 1):
         """
@@ -74,5 +74,4 @@ class MultimodalRAGService:
             "page_number": page_num
         }
 
-# Create a singleton instance to be imported by the API
 rag_service = MultimodalRAGService()
