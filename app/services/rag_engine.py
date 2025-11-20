@@ -47,13 +47,32 @@ class MultimodalRAGService:
         Mock function for Vision LLM generation.
         In production, replace this with OpenAI GPT-4o or Ollama Llama-3.2 API call.
         """
-        # TODO: Integrate Llama-3.2-Vision or GPT-4o API here.
-        # For now, we return a structured response proving the retrieval worked.
         return (
             f"I analyzed the retrieved document page. "
             f"Based on the visual data (charts/tables) found in the image, "
             f"this section appears highly relevant to your query: '{query}'."
         )
+    def query(self, query_text: str):
+        """
+        Same pipeline used by FastAPI endpoint.
+        Lets you run RAG directly without FastAPI.
+        """
+        image_b64, page_num = self.search(query_text)
+
+        if not image_b64:
+            return {
+                "answer": "Sorry, I couldn't find relevant information in the document.",
+                "retrieved_image": "",
+                "page_number": 0
+            }
+
+        answer = self.generate_answer(query_text, image_b64)
+
+        return {
+            "answer": answer,
+            "retrieved_image": image_b64,
+            "page_number": page_num
+        }
 
 # Create a singleton instance to be imported by the API
 rag_service = MultimodalRAGService()
