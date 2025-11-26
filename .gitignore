@@ -5,3 +5,4 @@ instance/
 .env
 .env.*
 .DS_Store
+notex.txt

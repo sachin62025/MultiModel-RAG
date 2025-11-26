@@ -45,9 +45,3 @@ python -m app.main
 ### 4. Use the App
 
 Open your browser to: `http://localhost:8000`
-
-## Resume Content
-
-Headline:
-
-Machine Learning Engineer | Specialized in Multimodal AI & Production Systems
