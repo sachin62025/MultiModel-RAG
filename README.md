@@ -1,47 +1,100 @@
-# Enterprise Multimodal RAG Agent (FastAPI + ColPali)
+# Multi-Modal Document Intelligence (RAG-based QA)
 
-## Project Overview
+**Project:** Multi-Modal RAG QA — ingestion, retrieval, and grounded generation for documents (PDFs)
+**Status:** Core system complete — FAISS semantic retrieval + table-aware chunking, OCR, numeric extraction, grounded generation.
 
-This project is a production-ready **Multimodal Retrieval-Augmented Generation (RAG)** system designed to handle complex financial documents (PDFs with tables, charts, and graphs).
+---
 
-Unlike traditional text-based RAG, this system uses **ColPali (Vision-Language Model)** to index document pages as visual embeddings. This allows it to retrieve information based on visual layout (e.g., "the chart on the bottom left") rather than just text keywords.
+## Overview
 
-The architecture is modular, using **FastAPI** for the backend and vanilla **HTML/JS** for a lightweight, decoupled frontend.
+This project implements an end-to-end Retrieval-Augmented Generation (RAG) system that handles **multi-modal documents** (text, tables, images/OCR). It supports:
 
-## Tech Stack
+- Page rasterization + OCR for scanned PDFs
+- Table row-level chunking for precise numeric extraction
+- Vector embeddings (FAISS) for semantic retrieval
+- Keyword-based reranking for exact matches
+- Numeric extractors for high-precision answers (revenue, EPS, etc.)
+- FastAPI demo app + simple HTML/JS UI
+- Works without GPU
 
-* **Backend:** FastAPI, Uvicorn
-* **Retrieval:** ColPali (via `byaldi`), PyTorch
-* **Frontend:** HTML5, CSS3, JavaScript (Fetch API)
-* **Indexing:** Visual Vector Embeddings (ColBERT-style late interaction)
+---
 
-## Quick Start
+## Features
 
-### 1. Setup Environment
+- Multi-modal ingestion: text, tables, embedded images, rasterized page images + OCR.
+- Smart chunking: semantic + structural segmentation (table-row chunks).
+- Vector index: FAISS-based embedding store with metadata.
+- QA layers:
+  - Numeric extractors (regex & table-aware)
+  - Comparison extractors (current vs prior)
+  - Certification & repurchase extractors
+  - Generator fallback (FLAN-T5 or OpenAI)
+- FastAPI UI: upload PDF, build index, query with citations and debug snippets.
+
+---
+
+## Repo layout
+
+├─ web/
+│ ├─ app.py
+│ └─ templates/index.html
+├─ ingest/
+│ ├─ pdf_ingest.py
+│ └─ ocr.py
+├─ embeddings/
+│ └─ embedder.py
+├─ index/
+│ ├─ faiss_index.py
+│ └─ meta.pkl
+├─ qa/
+│ ├─ generator.py # answer_query pipeline (retrieval -> extract -> generate)
+│ ├─ rerank.py
+│ └─ extractors.py
+├─ cli.py
+├─ data/
+└─ README.md
+
+## Requirements
 
 ```
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  
 pip install -r requirements.txt
-
 ```
 
-### 2. Add Data
+## Run locally
 
-Place your PDF file (e.g., `nvidia_10q.pdf`) inside the `data/` folder.
-
-### 3. Run the Server
-
-This command starts the API and serves the frontend.
+#### Ingest a PDF
 
 ```
-python -m app.main
-
+python cli.py ingest path/to/NVIDIA-10Q-20242905.pdf --max-pages 50
 ```
 
-*Note: On the first run, it will download the ColPali model (~2GB) and create the index. This may take a few minutes.*
+#### Build the FAISS index
 
-### 4. Use the App
+```
+python cli.py index
+```
 
-Open your browser to: `http://localhost:8000`
+### Direct with UI
+
+```
+uvicorn web.app:app --reload --host 0.0.0.0 --port 8000
+```
+
+##### Open UI
+
+```
+http://localhost:8000
+```
+
+## API Endpoints
+
+- **POST `/upload`** — upload PDF (multipart/form-data `file`)
+- **POST `/build_index`** — build FAISS index from ingested chunks
+- **POST `/query`** — ask a question (form field `q`)
+  - Response includes:
+    - **`answer`** (string)
+    - **`method`** (extraction | generation | extraction_comparison | ...)
+    - **`citations`** (concise list with doc_id, page)
+    - **`retrieved`** (top chunk snippets for debugging)
+    - **`prompt`** (present only for generation; dev use)
+- **GET `/status`** — check index/chunks availability

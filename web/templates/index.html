@@ -1,0 +1,273 @@
+<!-- web/templates/index.html
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Multi-Modal RAG QA Demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    input, textarea { width: 100%; padding: 8px; margin: 6px 0; }
+    button { padding: 8px 12px; }
+    .card { padding: 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; }
+    pre { background:#f7f7f7; padding:10px; }
+  </style>
+</head>
+<body>
+  <h2>Multi-Modal RAG QA </h2>
+
+  <div class="card">
+    <h3>1. Upload PDF</h3>
+    <input id="file" type="file" accept=".pdf"/>
+    <button onclick="upload()">Upload & Ingest</button>
+    <div id="upload_status"></div>
+  </div>
+
+  <div class="card">
+    <h3>2. Build Index</h3>
+    <button onclick="buildIndex()">Build FAISS Index</button>
+    <div id="index_status"></div>
+  </div>
+
+  <div class="card">
+    <h3>3. Ask a Question</h3>
+    <textarea id="query" rows="3" placeholder="Enter your question..."></textarea>
+    <button onclick="ask()">Ask</button>
+    <div id="answer"></div>
+  </div>
+
+  <script>
+    async function upload(){
+      const f = document.getElementById("file").files[0];
+      if(!f){ alert("Choose PDF file first"); return; }
+      const fd = new FormData();
+      fd.append("file", f);
+      document.getElementById("upload_status").innerText = "Uploading...";
+      const res = await fetch("/upload", { method: "POST", body: fd });
+      const j = await res.json();
+      document.getElementById("upload_status").innerText = JSON.stringify(j);
+    }
+    async function buildIndex(){
+      document.getElementById("index_status").innerText = "Building index...";
+      const res = await fetch("/build_index", { method: "POST" });
+      const j = await res.json();
+      document.getElementById("index_status").innerText = JSON.stringify(j);
+    }
+    async function ask(){
+      const q = document.getElementById("query").value;
+      if(!q){ alert("Type a question"); return; }
+      document.getElementById("answer").innerText = "Thinking...";
+      const body = new URLSearchParams();
+      body.append("q", q);
+      const res = await fetch("/query", { method:"POST", body });
+      const j = await res.json();
+      if(j.answer){
+        document.getElementById("answer").innerHTML = "<h4>Answer</h4><pre>"+j.answer+"</pre><h4>Citations</h4><pre>"+JSON.stringify(j.citations,null,2)+"</pre>";
+      } else {
+        document.getElementById("answer").innerText = JSON.stringify(j);
+      }
+    }
+  </script>
+</body>
+</html> -->
+
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Multi-Modal RAG QA Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color:#111; background:#fafafa; }
+    h2 { margin-bottom: 8px; }
+    input, textarea, button { font-size: 14px; }
+    input, textarea { width: 100%; padding: 8px; margin: 6px 0; box-sizing: border-box; border:1px solid #ddd; border-radius:6px; background: #fff; }
+    button { padding: 8px 12px; border-radius:6px; border:1px solid #ccc; background: #fff; cursor:pointer; }
+    button:hover { box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .card { padding: 14px; border: 1px solid #e6e6e6; border-radius: 8px; margin-bottom: 12px; background: #fff; }
+    .small { font-size: 13px; color:#666; }
+    pre { white-space: pre-wrap; word-wrap: break-word; background:#f7f7f7; padding:10px; border-radius:6px; }
+    ol { padding-left: 18px; }
+    .muted { color:#666; font-size:13px; }
+    .snippet { margin:6px 0; padding:8px; background:#f7f7f7; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <h2>Multi-Modal RAG QA — Demo UI</h2>
+
+  <div class="card">
+    <h3>1. Upload PDF</h3>
+    <input id="file" type="file" accept=".pdf"/>
+    <div style="margin-top:8px;">
+      <button onclick="upload()">Upload & Ingest</button>
+      <span class="small" id="upload_status" style="margin-left:12px;"></span>
+    </div>
+    <div id="upload_result" style="margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <h3>2. Build Index</h3>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button onclick="buildIndex()">Build FAISS Index</button>
+      <span id="index_status" class="small"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>3. Ask a Question</h3>
+    <textarea id="query" rows="3" placeholder="Enter your question..."></textarea>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <button onclick="ask()">Ask</button>
+      <button onclick="status()">Status</button>
+      <span class="small" id="status_text" style="margin-left:12px;"></span>
+    </div>
+
+    <div id="answer" style="margin-top:12px;"></div>
+    <div id="answer_meta" style="margin-top:8px; font-size:14px; color:#333;"></div>
+    <div id="retrieved_list" style="margin-top:12px;"></div>
+
+    <div id="prompt_block" style="margin-top:12px; display:none;">
+      <h4>Prompt (dev only)</h4>
+      <pre id="prompt_text" style="background:#fff9c4; padding:8px; border-radius:6px;"></pre>
+    </div>
+  </div>
+
+  <script>
+    // small helper to escape HTML
+    function escapeHtml(unsafe) {
+      if (!unsafe) return "";
+      return String(unsafe)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    async function upload(){
+      const f = document.getElementById("file").files[0];
+      if(!f){ alert("Choose a PDF file first"); return; }
+      const fd = new FormData();
+      fd.append("file", f);
+      document.getElementById("upload_status").innerText = "Uploading...";
+      document.getElementById("upload_result").innerText = "";
+      try {
+        const res = await fetch("/upload", { method: "POST", body: fd });
+        const j = await res.json();
+        document.getElementById("upload_status").innerText = "";
+        if (j.status === "ok") {
+          document.getElementById("upload_result").innerHTML = `<div class="muted">Ingested file: <strong>${escapeHtml(j.file)}</strong></div><div class="small">${escapeHtml(j.message)}</div>`;
+        } else {
+          document.getElementById("upload_result").innerText = "Upload failed: " + (j.message || JSON.stringify(j));
+        }
+      } catch (err) {
+        document.getElementById("upload_status").innerText = "";
+        document.getElementById("upload_result").innerText = "Upload error: " + String(err);
+      }
+    }
+
+    async function buildIndex(){
+      document.getElementById("index_status").innerText = "Building index...";
+      try {
+        const res = await fetch("/build_index", { method: "POST" });
+        const j = await res.json();
+        document.getElementById("index_status").innerText = "";
+        if (j.status === "ok") {
+          document.getElementById("index_status").innerText = "Index built ✓";
+        } else {
+          document.getElementById("index_status").innerText = "Index build error: " + (j.message || JSON.stringify(j));
+        }
+      } catch (err) {
+        document.getElementById("index_status").innerText = "Index build failed: " + String(err);
+      }
+    }
+
+    async function status(){
+      document.getElementById("status_text").innerText = "Checking...";
+      try {
+        const res = await fetch("/status");
+        const j = await res.json();
+        document.getElementById("status_text").innerText = `index: ${j.index ? "yes":"no"}, chunks: ${j.chunks ? "yes":"no"}`;
+      } catch (err) {
+        document.getElementById("status_text").innerText = "Status error";
+      }
+      setTimeout(()=>document.getElementById("status_text").innerText="", 5000);
+    }
+
+    async function ask(){
+      const q = document.getElementById("query").value;
+      if(!q){ alert("Type a question"); return; }
+      document.getElementById("answer").innerText = "Thinking...";
+      document.getElementById("answer_meta").innerText = "";
+      document.getElementById("retrieved_list").innerHTML = "";
+      document.getElementById("prompt_block").style.display = "none";
+
+      const body = new URLSearchParams();
+      body.append("q", q);
+      try {
+        const res = await fetch("/query", { method:"POST", body });
+        const j = await res.json();
+
+        if (j.status === "error") {
+          document.getElementById("answer").innerText = "Error: " + j.message;
+          return;
+        }
+
+        // Show the main answer
+        if (j.answer) {
+          document.getElementById("answer").innerHTML = "<h4>Answer</h4><pre>" + escapeHtml(j.answer) + "</pre>";
+        } else {
+          document.getElementById("answer").innerText = "No answer returned.";
+        }
+
+        // Show method and citations
+        const method = j.method || "unknown";
+        let metaHtml = `<strong>Method:</strong> ${escapeHtml(method)}<br/>`;
+        if (j.citations && j.citations.length) {
+          metaHtml += "<strong>Citations:</strong><ul>";
+          for (const c of j.citations) {
+            const doc = c.doc_id || c.document || c.source || "unknown";
+            const page = c.page || c.p || "-";
+            const label = c.label ? ` — ${c.label}` : "";
+            metaHtml += `<li>${escapeHtml(doc)} (page ${escapeHtml(String(page))})${escapeHtml(label)}</li>`;
+          }
+          metaHtml += "</ul>";
+        }
+        document.getElementById("answer_meta").innerHTML = metaHtml;
+
+        // Show retrieved snippets for debugging/verification
+        const retrieved = j.retrieved || [];
+        const rDiv = document.getElementById("retrieved_list");
+        if (retrieved.length) {
+          let html = "<h4>Top retrieved chunks (debug)</h4>";
+          html += "<ol>";
+          for (const c of retrieved) {
+            const doc = c.doc_id || "unknown";
+            const page = c.page || "-";
+            const chunkId = c.chunk_id || "";
+            const typ = c.type || "";
+            const score = (c.score !== undefined && c.score !== null) ? ` (score ${Number(c.score).toFixed(3)})` : "";
+            const snippet = c.snippet ? escapeHtml(c.snippet) : "";
+            html += `<li><strong>${escapeHtml(doc)}</strong> — page ${escapeHtml(String(page))} — ${escapeHtml(typ)} ${escapeHtml(score)}<br/><div class="snippet">${snippet}</div><small>chunk_id: ${escapeHtml(chunkId)}</small></li>`;
+          }
+          html += "</ol>";
+          rDiv.innerHTML = html;
+        } else {
+          rDiv.innerHTML = "<em>No retrieved chunks returned.</em>";
+        }
+
+        // Show prompt when present (development only)
+        if (j.prompt) {
+          document.getElementById("prompt_text").innerText = j.prompt;
+          document.getElementById("prompt_block").style.display = "block";
+        } else {
+          document.getElementById("prompt_block").style.display = "none";
+        }
+
+      } catch (err) {
+        document.getElementById("answer").innerText = "Request failed: " + String(err);
+      }
+    }
+  </script>
+</body>
+</html>
