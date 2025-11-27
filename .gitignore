@@ -6,3 +6,5 @@ instance/
 .env.*
 .DS_Store
 notex.txt
+data/
+main-d.md
