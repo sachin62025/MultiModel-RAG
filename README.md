@@ -35,6 +35,7 @@ This project implements an end-to-end Retrieval-Augmented Generation (RAG) syste
 
 ## Repo layout
 
+```
 ├─ web/
 │ ├─ app.py
 │ └─ templates/index.html
@@ -53,6 +54,8 @@ This project implements an end-to-end Retrieval-Augmented Generation (RAG) syste
 ├─ cli.py
 ├─ data/
 └─ README.md
+```
+
 
 ## Requirements
 
