@@ -56,7 +56,6 @@ This project implements an end-to-end Retrieval-Augmented Generation (RAG) syste
 └─ README.md
 ```
 
-
 ## Requirements
 
 ```
@@ -94,10 +93,72 @@ http://localhost:8000
 - **POST `/upload`** — upload PDF (multipart/form-data `file`)
 - **POST `/build_index`** — build FAISS index from ingested chunks
 - **POST `/query`** — ask a question (form field `q`)
+
   - Response includes:
     - **`answer`** (string)
     - **`method`** (extraction | generation | extraction_comparison | ...)
     - **`citations`** (concise list with doc_id, page)
     - **`retrieved`** (top chunk snippets for debugging)
-    - **`prompt`** (present only for generation; dev use)
+    - **`prompt`** (present only for ge
+    - neration; dev use)
 - **GET `/status`** — check index/chunks availability
+
+  ### Multi-Modal RAG QA System Architecture
+
+
+  ```mermaid
+  flowchart LR
+    %% User & UI
+    U[User] --> UI["Web UI (HTML/JS)"]
+    UI --> API[FastAPI]
+
+    %% FastAPI Endpoints
+    API --> UP["POST /upload"]
+    API --> BI["POST /build_index"]
+    API --> QY["POST /query"]
+
+    %% Ingest pipeline
+    UP --> ING[Ingest Service]
+    ING --> REND["Page Rasterizer\n(pdfplumber / PyMuPDF)"]
+    REND --> PIMG[Page Images]
+    PIMG --> OCR["OCR (EasyOCR / Tesseract)"]
+    REND --> TXT[PDF Text Layer Extraction]
+    TXT --> TBL["Table Extraction (row-level)"]
+    OCR --> OCRTXT[OCR Text]
+    TBL --> TBLROWS[Table Row Chunks]
+    OCRTXT --> PCHUNKS[Paragraph Chunks]
+    TXT --> PCHUNKS
+
+    %% Chunking & storage
+    PCHUNKS --> CHUNKER["Chunker\n(paragraphs, table_rows, images)"]
+    TBLROWS --> CHUNKER
+    CHUNKER --> RAW["Raw files & page images (data/raw/)"]
+    CHUNKER --> META["Chunk metadata (meta.pkl)"]
+
+    %% Embedding & Index
+    CHUNKER --> EMB["Embedding Service\n(sentence-transformer)"]
+    EMB --> FAISS[FAISS Vector Index]
+    META --> FAISS
+    BI --> EMB
+    BI --> FAISS
+
+    %% Query path
+    QY --> QEMB[Embed Query]
+    QEMB --> FSEARCH["FAISS search (top-K)"]
+    FSEARCH --> RERANK[Keyword Reranker]
+    RERANK --> EXTRACT["Deterministic Extractors\n(numeric/comparison/etc.)"]
+    EXTRACT --> IFFOUND{Found?}
+    IFFOUND -->|Yes| RESP1[Return extraction + citation]
+    IFFOUND -->|No| PROMPT[Assemble Grounded Prompt]
+    PROMPT --> LLM["LLM Generator\n(FLAN-T5 / OpenAI)"]
+    LLM --> RESP2[Return generated answer + citations]
+    RESP1 --> API
+    RESP2 --> API
+    API --> UI
+
+    %% Storage
+    FAISS --> FFILES[index/faiss.index]
+    META --> MFILES[index/meta.pkl]
+
+
+  ```
