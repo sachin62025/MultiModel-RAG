@@ -1,76 +1,3 @@
-<!-- web/templates/index.html
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Multi-Modal RAG QA Demo</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 24px; }
-    input, textarea { width: 100%; padding: 8px; margin: 6px 0; }
-    button { padding: 8px 12px; }
-    .card { padding: 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; }
-    pre { background:#f7f7f7; padding:10px; }
-  </style>
-</head>
-<body>
-  <h2>Multi-Modal RAG QA </h2>
-
-  <div class="card">
-    <h3>1. Upload PDF</h3>
-    <input id="file" type="file" accept=".pdf"/>
-    <button onclick="upload()">Upload & Ingest</button>
-    <div id="upload_status"></div>
-  </div>
-
-  <div class="card">
-    <h3>2. Build Index</h3>
-    <button onclick="buildIndex()">Build FAISS Index</button>
-    <div id="index_status"></div>
-  </div>
-
-  <div class="card">
-    <h3>3. Ask a Question</h3>
-    <textarea id="query" rows="3" placeholder="Enter your question..."></textarea>
-    <button onclick="ask()">Ask</button>
-    <div id="answer"></div>
-  </div>
-
-  <script>
-    async function upload(){
-      const f = document.getElementById("file").files[0];
-      if(!f){ alert("Choose PDF file first"); return; }
-      const fd = new FormData();
-      fd.append("file", f);
-      document.getElementById("upload_status").innerText = "Uploading...";
-      const res = await fetch("/upload", { method: "POST", body: fd });
-      const j = await res.json();
-      document.getElementById("upload_status").innerText = JSON.stringify(j);
-    }
-    async function buildIndex(){
-      document.getElementById("index_status").innerText = "Building index...";
-      const res = await fetch("/build_index", { method: "POST" });
-      const j = await res.json();
-      document.getElementById("index_status").innerText = JSON.stringify(j);
-    }
-    async function ask(){
-      const q = document.getElementById("query").value;
-      if(!q){ alert("Type a question"); return; }
-      document.getElementById("answer").innerText = "Thinking...";
-      const body = new URLSearchParams();
-      body.append("q", q);
-      const res = await fetch("/query", { method:"POST", body });
-      const j = await res.json();
-      if(j.answer){
-        document.getElementById("answer").innerHTML = "<h4>Answer</h4><pre>"+j.answer+"</pre><h4>Citations</h4><pre>"+JSON.stringify(j.citations,null,2)+"</pre>";
-      } else {
-        document.getElementById("answer").innerText = JSON.stringify(j);
-      }
-    }
-  </script>
-</body>
-</html> -->
-
-
 <!doctype html>
 <html>
 <head>
@@ -93,10 +20,9 @@
   </style>
 </head>
 <body>
-  <h2>Multi-Modal RAG QA — Demo UI</h2>
-
+  <h2>Multi-Modal RAG QA </h2>
   <div class="card">
-    <h3>1. Upload PDF</h3>
+    <h3> Upload PDF</h3>
     <input id="file" type="file" accept=".pdf"/>
     <div style="margin-top:8px;">
       <button onclick="upload()">Upload & Ingest</button>
@@ -106,7 +32,7 @@
   </div>
 
   <div class="card">
-    <h3>2. Build Index</h3>
+    <h3>Build Index</h3>
     <div style="display:flex; gap:8px; align-items:center;">
       <button onclick="buildIndex()">Build FAISS Index</button>
       <span id="index_status" class="small"></span>
@@ -114,7 +40,7 @@
   </div>
 
   <div class="card">
-    <h3>3. Ask a Question</h3>
+    <h3>Ask a Question</h3>
     <textarea id="query" rows="3" placeholder="Enter your question..."></textarea>
     <div style="display:flex; gap:8px; align-items:center;">
       <button onclick="ask()">Ask</button>
