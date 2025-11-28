@@ -60,7 +60,7 @@ def answer_query(query: str, top_k: int = 20, use_openai: bool = False, openai_c
      - else -> assemble prompt with top chunks and generate answer via local generator (or openai if configured)
     Returns dict with keys: answer (str), method (extract/generate), citations (list of chunks), retrieved (top chunks)
     """
-    # 1) embed + retrieve
+    # embed + retrieve
     q_emb = embed_texts([query])
     try:
         results, scores = search_index(q_emb, top_k=top_k)

@@ -1,6 +1,4 @@
-# ingest/ocr.py
 import easyocr
-# easyocr loads language models on initialization; keep single reader
 _reader = None
 
 def _get_reader():

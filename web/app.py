@@ -71,41 +71,6 @@ async def build_index():
     build_faiss_index(vecs, chunks)
     return JSONResponse({"status":"ok","message":"Index built"})
 
-
-# @app.post("/build_index")
-# async def build_index():
-#     if not os.path.exists(CHUNKS_PATH):
-#         return JSONResponse({"status":"error","message":"No chunks found. Upload a PDF first."})
-#     with open(CHUNKS_PATH, "rb") as f:
-#         chunks = pickle.load(f)
-#     texts = [c.get("text","") for c in chunks]
-#     vecs = embed_texts(texts)
-#     vecs = np.array(vecs).astype("float32")
-#     build_faiss_index(vecs, chunks)
-#     # Build BM25 too
-#     build_bm25_index(chunks)
-#     return JSONResponse({"status":"ok","message":"Index (FAISS + BM25) built"})
-
-
-# Query endpoint
-# @app.post("/query")
-# async def query(q: str = Form(...)):
-#     try:
-#         resp = answer_query(q, top_k=20, use_openai=False, openai_client=None)
-#         # normalize response for UI
-#         if resp.get("method") == "extraction":
-#             answer = resp["answer"]
-#             citation = resp["citation"]
-#             citations = [citation]
-#         else:
-#             answer = resp["answer"]
-#             citations = resp.get("citations", [])
-#         return JSONResponse({"query": q, "answer": answer, "method": resp.get("method"), "citations": citations})
-#     except Exception as e:
-#         return JSONResponse({"status":"error","message": str(e)})
-    
-# web/app.py  -- replace the /query endpoint with this implementation
-
 from fastapi import Form
 from fastapi.responses import JSONResponse
 SNIPPET_CHARS = 600
